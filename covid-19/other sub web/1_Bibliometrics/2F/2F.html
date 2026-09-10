@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1 文献计量</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "Inter", sans-serif;
+        }
+
+        body {
+            height: auto;
+            min-height: 100vh;
+            display: flex;
+            transition: margin-left 0.3s ease;
+            background-color: #f5f5f5;
+        }
+
+        .sidebar-container {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            width: 350px;
+            transition: all 0.3s ease;
+            z-index: 999;
+        }
+
+        .sidebar-container.collapsed {
+            width: 60px;
+        }
+
+        .sidebar {
+            width: 100%;
+            height: 100vh;
+            padding: 40px 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background-color: #fff;
+        }
+
+        .toggle-btn {
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #fff;
+            border: 2px solid #e9ecef;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-btn:hover {
+            background-color: #f8f9fa;
+            border-color: #007bff;
+        }
+
+        .toggle-btn::after {
+            content: "←";
+            color: #666;
+            font-size: 14px;
+        }
+
+        .sidebar-container.collapsed .toggle-btn::after {
+            content: "→";
+        }
+
+        .sidebar-container.collapsed .sidebar {
+            padding: 40px 0;
+            overflow: hidden;
+        }
+
+        .sidebar-container.collapsed .sidebar-item {
+            padding: 20px 0;
+            text-align: center;
+            font-size: 0;
+        }
+
+        .sidebar-container.collapsed .sidebar-item::before {
+            content: attr(data-num);
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff !important;
+            display: block;
+        }
+
+        .sidebar-container.collapsed .sidebar-item.home::before {
+            content: "🏠";
+            color: #2c3e50 !important;
+        }
+
+        .sidebar-item {
+            padding: 20px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #fff !important;
+            font-weight: 500;
+            text-decoration: none;
+            display: block;
+        }
+
+        .sidebar-item .en-text {
+            font-size: 12px;
+            opacity: 0.9;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .sidebar-item:hover {
+            opacity: 0.9;
+            transform: translateX(2px);
+        }
+
+        .sidebar-item.home {
+            font-weight: 800;
+            font-size: 20px;
+            background-color: #f8f9fa;
+            color: #2c3e50 !important;
+            border-bottom: 3px solid #dee2e6;
+            margin-bottom: 15px;
+            padding: 25px 15px;
+        }
+
+        .sidebar-item.home:hover {
+            background-color: #e9ecef;
+            color: #007bff !important;
+            opacity: 1;
+            transform: none;
+        }
+
+        .sidebar-item.item-1 {
+            background-color: rgb(239, 148, 158);
+        }
+
+        .sidebar-item.item-2 {
+            background-color: rgb(245, 180, 130);
+        }
+
+        .sidebar-item.item-3 {
+            background-color: rgb(254, 217, 97);
+        }
+
+        .main-content {
+            flex: 1;
+            margin-left: 350px;
+            transition: margin-left 0.3s ease;
+            overflow: auto;
+            min-height: 100vh;
+            pointer-events: auto;
+            padding: 20px;
+        }
+
+        .sidebar-container.collapsed~.main-content {
+            margin-left: 60px;
+        }
+
+        /* 新增：图片容器分组样式 */
+        .image-section {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #007bff;
+        }
+
+        .section-description {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .image-wrapper {
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: zoom-in;
+            overflow: hidden;
+            background-color: #fafafa;
+            border-radius: 4px;
+            min-height: 400px;
+        }
+
+        .my-image {
+            max-width: 100%;
+            height: auto;
+            object-fit: contain;
+            transition: transform 0.15s ease-out;
+            transform-origin: center center;
+            user-select: none;
+            display: block;
+        }
+
+        .zoom-tip {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 18px;
+            background: rgba(0, 0, 0, 0.75);
+            color: #fff;
+            font-size: 13px;
+            border-radius: 6px;
+            z-index: 99;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 新增：下拉提示动画 */
+        .scroll-indicator {
+            position: fixed;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            color: #007bff;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 98;
+            animation: bounce 2s infinite;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.2);
+        }
+
+        .scroll-indicator::after {
+            content: "↓";
+            display: block;
+            font-size: 20px;
+            margin-top: 4px;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            20%,
+            50%,
+            80%,
+            100% {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            40% {
+                transform: translateX(-50%) translateY(-10px);
+            }
+
+            60% {
+                transform: translateX(-50%) translateY(-5px);
+            }
+        }
+
+        /* 新增：加载错误提示 */
+        .image-error {
+            color: #dc3545;
+            padding: 40px;
+            text-align: center;
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar-container" id="sidebarContainer">
+        <div class="toggle-btn" id="toggleBtn"></div>
+        <div class="sidebar">
+            <a href="../../../index.html" class="sidebar-item home" data-num="🏠">主页 Home</a>
+            <a href="../../1_Bibliometrics/1_Bibliometrics.html" class="sidebar-item item-1" data-num="1">1
+                期刊论文总体发表情况<span class="en-text">Bibliometrics</span></a>
+            <a href="../../2_Technology/2_Technology.html" class="sidebar-item item-2" data-num="2">2 期刊论文技术应用特点<span
+                    class="en-text">Technological Applications</span></a>
+            <a href="../../3_In_depth/3_In_depth.html" class="sidebar-item item-3" data-num="3">3 研究深度剖析<span
+                    class="en-text">In-depth Systematic Analysis‌</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- 第一张图片区域 -->
+        <div class="image-section">
+            <h2 class="section-title">相关期刊的刊发情况</h2>
+            <p class="section-description">该图展示了相关期刊的文献刊发情况</p>
+            <div class="image-wrapper" data-image-id="image1">
+                <img class="my-image" src="2F.png" alt="期刊文献发表机构合作情况"
+                    onerror="this.parentElement.innerHTML='<div class=\'image-error\'>图片加载失败：2F.png</div>'">
+            </div>
+        </div>
+
+        <!-- 第二张图片区域 -->
+        <div class="image-section">
+            <h2 class="section-title">表格数据信息</h2>
+            <p class="section-description">该表格提供了详细的文献计量统计数据和分析结果</p>
+            <div class="image-wrapper" data-image-id="image2">
+                <img class="my-image" src="TS5.png" alt="文献计量统计表格"
+                    onerror="this.parentElement.innerHTML='<div class=\'image-error\'>图片加载失败：TS5.png</div>'">
+            </div>
+        </div>
+
+        <!-- 第三张图片区域 -->
+        <div class="image-section">
+            <h2 class="section-title">表格数据信息</h3>
+                <p class="section-description">该表格提供了详细的文献计量统计数据和分析结果</p>
+                <div class="image-wrapper" data-image-id="image3">
+                    <img class="my-image" src="TS6.png" alt="文献计量统计表格"
+                        onerror="this.parentElement.innerHTML='<div class=\'image-error\'>图片加载失败：TS6.png</div>'">
+                </div>
+        </div>
+
+        <!-- 操作提示 -->
+        <div class="zoom-tip">鼠标滚轮可放大/缩小图片 | 放大后按住鼠标可拖拽移动</div>
+        <div class="scroll-indicator" id="scrollIndicator">向下滚动查看表格信息</div>
+    </div>
+
+    <script>
+        // 侧边栏折叠功能
+        const sidebarContainer = document.getElementById('sidebarContainer');
+        const toggleBtn = document.getElementById('toggleBtn');
+        toggleBtn.addEventListener('click', function () {
+            sidebarContainer.classList.toggle('collapsed');
+        });
+
+        // 下拉提示：滚动后隐藏
+        const scrollIndicator = document.getElementById('scrollIndicator');
+        let scrollTimeout;
+        window.addEventListener('scroll', function () {
+            if (window.scrollY > 100) {
+                scrollIndicator.style.opacity = '0';
+                scrollIndicator.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => {
+                    scrollIndicator.style.display = 'none';
+                }, 300);
+            }
+        });
+
+        // 图片缩放和拖拽功能
+        const imageWrappers = document.querySelectorAll('.image-wrapper');
+
+        imageWrappers.forEach(wrapper => {
+            const image = wrapper.querySelector('.my-image');
+            if (!image) return;
+
+            let scale = 1;
+            const scaleStep = 0.1;
+            const minScale = 0.5;
+            const maxScale = 5;
+
+            let isDragging = false;
+            let startX = 0;
+            let startY = 0;
+            let offsetX = 0;
+            let offsetY = 0;
+
+            // 鼠标按下：开启拖拽
+            wrapper.addEventListener('mousedown', function (e) {
+                if (scale <= 1) return;
+                isDragging = true;
+                startX = e.clientX;
+                startY = e.clientY;
+
+                const currentTransform = window.getComputedStyle(image).transform;
+                if (currentTransform !== 'none') {
+                    const matrix = new DOMMatrix(currentTransform);
+                    offsetX = matrix.e;
+                    offsetY = matrix.f;
+                }
+                wrapper.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+
+            // 鼠标移动：执行拖拽
+            document.addEventListener('mousemove', function (e) {
+                if (!isDragging) return;
+
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                const newOffsetX = offsetX + dx;
+                const newOffsetY = offsetY + dy;
+
+                image.style.transform = `translate(${newOffsetX}px, ${newOffsetY}px) scale(${scale})`;
+            });
+
+            // 鼠标松开：关闭拖拽
+            function endDragging() {
+                if (!isDragging) return;
+                isDragging = false;
+                wrapper.style.cursor = scale > 1 ? 'zoom-out' : 'zoom-in';
+            }
+
+            document.addEventListener('mouseup', endDragging);
+            wrapper.addEventListener('mouseleave', endDragging);
+
+            // 滚轮缩放
+            wrapper.addEventListener('wheel', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (e.deltaY < 0) {
+                    scale = Math.min(scale + scaleStep, maxScale);
+                } else {
+                    scale = Math.max(scale - scaleStep, minScale);
+                }
+
+                // 缩放到1时重置偏移
+                if (scale === 1) {
+                    offsetX = 0;
+                    offsetY = 0;
+                    image.style.transform = `translate(0, 0) scale(1)`;
+                } else {
+                    const currentTransform = window.getComputedStyle(image).transform;
+                    let currentOffsetX = 0;
+                    let currentOffsetY = 0;
+                    if (currentTransform !== 'none') {
+                        const matrix = new DOMMatrix(currentTransform);
+                        currentOffsetX = matrix.e;
+                        currentOffsetY = matrix.f;
+                    }
+                    image.style.transform = `translate(${currentOffsetX}px, ${currentOffsetY}px) scale(${scale})`;
+                }
+
+                wrapper.style.cursor = scale > 1 ? 'zoom-out' : 'zoom-in';
+            }, {passive: false});
+        });
+    </script>
+</body>
+
+</html>

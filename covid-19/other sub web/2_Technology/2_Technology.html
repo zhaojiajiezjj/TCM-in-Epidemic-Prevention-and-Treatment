@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>2 技术应用</title>
+    <style>
+        /* 全局重置：消除浏览器默认边距，统一盒模型 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "Inter", sans-serif;
+        }
+
+        body {
+            height: auto;
+            min-height: 100vh;
+            display: flex;
+            transition: margin-left 0.3s ease;
+            overflow: hidden;
+            /* 防止整体滚动 */
+        }
+
+        /* 新增：侧边栏外层容器（核心收缩控制） */
+        .sidebar-container {
+            position: fixed;
+            left: 0;
+            top: 0;
+            height: 100vh;
+            width: 350px;
+            transition: all 0.3s ease;
+            z-index: 1000;
+            background-color: #fff;
+        }
+
+        /* 收缩态样式 */
+        .sidebar-container.collapsed {
+            width: 60px;
+        }
+
+        /* 左侧侧边栏样式 - 完全保留原有所有设置 */
+        .sidebar {
+            width: 100%;
+            height: 100vh;
+            padding: 40px 20px;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background-color: #fff;
+        }
+
+        /* 新增：收缩/展开切换按钮（小圆圈） */
+        .toggle-btn {
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #fff;
+            border: 2px solid #e9ecef;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            z-index: 1001;
+            transition: all 0.2s ease;
+        }
+
+        /* 按钮悬浮效果 */
+        .toggle-btn:hover {
+            background-color: #f8f9fa;
+            border-color: #007bff;
+        }
+
+        /* 按钮箭头 */
+        .toggle-btn::after {
+            content: "←";
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* 收缩态箭头切换 */
+        .sidebar-container.collapsed .toggle-btn::after {
+            content: "→";
+        }
+
+        /* 新增：收缩态隐藏文字（仅保留窄栏），展开态完全显示 */
+        .sidebar-container.collapsed .sidebar {
+            padding: 40px 0;
+            overflow: hidden;
+        }
+
+        .sidebar-container.collapsed .sidebar-item {
+            padding: 20px 0;
+            text-align: center;
+            font-size: 0;
+            display: block;
+            position: relative;
+        }
+
+        /* 收缩态仅显示数字/主页图标（保留核心标识） */
+        .sidebar-container.collapsed .sidebar-item::before {
+            content: attr(data-num);
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff !important;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* 主页收缩态单独处理 */
+        .sidebar-container.collapsed .sidebar-item.home::before {
+            content: "🏠";
+            color: #2c3e50 !important;
+            font-size: 20px;
+        }
+
+        /* 原有侧边栏样式：完全保留，无任何修改 */
+        .sidebar-item {
+            padding: 20px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #fff !important;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        .sidebar-item .en-text {
+            font-size: 12px;
+            opacity: 0.9;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .sidebar-item:hover {
+            opacity: 0.9;
+            transform: translateX(2px);
+        }
+
+        .sidebar-item.home {
+            font-weight: 800;
+            font-size: 20px;
+            background-color: #f8f9fa;
+            color: #2c3e50 !important;
+            border-bottom: 3px solid #dee2e6;
+            margin-bottom: 15px;
+            padding: 25px 15px;
+        }
+
+        .sidebar-item.home:hover {
+            background-color: #e9ecef;
+            color: #007bff !important;
+            opacity: 1;
+            transform: none;
+        }
+
+        .sidebar-item.item-1 {
+            background-color: rgb(239, 148, 158);
+        }
+
+        .sidebar-item.item-2 {
+            background-color: rgb(245, 180, 130);
+        }
+
+        .sidebar-item.item-3 {
+            background-color: rgb(254, 217, 97);
+        }
+
+
+        /* 右侧图片内容区 - 核心修改：适配侧边栏收缩/展开的全屏/平铺逻辑 */
+        .main-content {
+            flex: 1;
+            margin-left: 350px;
+            transition: all 0.3s ease;
+            /* 改为all，同步margin和尺寸变化 */
+            position: relative;
+            overflow: hidden;
+            padding: 0;
+            margin: 0;
+            height: 100vh;
+        }
+
+        /* 收缩态适配：margin-left改为60px，占满剩余全屏 */
+        .sidebar-container.collapsed~.main-content {
+            margin-left: 60px;
+        }
+
+        /* 图片容器样式 - 核心修改：增加过渡，适配全屏/平铺 */
+        .image-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+            user-select: none;
+            /* 防止文本选中干扰拖拽 */
+            transition: all 0.3s ease;
+            /* 增加过渡，保证切换流畅 */
+        }
+
+        /* 图片容器：包裹图片和蒙版，统一缩放 - 核心修改：增加过渡 */
+        .image-container {
+            position: relative;
+            transform-origin: center center;
+            transition: all 0.3s ease;
+            /* 延长过渡时间，匹配侧边栏切换 */
+            margin: auto;
+            cursor: grab;
+            /* 添加抓取光标 */
+        }
+
+        .image-container.grabbing {
+            cursor: grabbing;
+            /* 抓取时的光标 */
+        }
+
+        .my-image {
+            display: block;
+            max-width: 100%;
+            max-height: 90vh;
+            object-fit: contain;
+            transition: all 0.3s ease;
+            /* 增加图片过渡效果 */
+        }
+
+        /* 侧边栏收缩时：图片容器自动放大至全屏 */
+        .sidebar-container.collapsed~.main-content .image-container {
+            transform: scale(calc(1.2)) translate(0, 0);
+            /* 自动放大，可调整缩放比例 */
+        }
+
+        /* 侧边栏收缩时：图片铺满全屏（调整max尺寸） */
+        .sidebar-container.collapsed~.main-content .my-image {
+            max-width: 100vw;
+            max-height: 100vh;
+        }
+
+        /* 蒙版层 */
+        .image-mask {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        /* 蒙版区域样式 */
+        .mask-area {
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.2);
+            border: 2px dashed rgba(0, 123, 255, 0.5);
+            border-radius: 8px;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 15px rgba(0, 123, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+            opacity: 0;
+            transform: scale(0.95);
+        }
+
+        .mask-area:hover {
+            background-color: rgba(0, 123, 255, 0.3);
+            border: 2px solid rgba(0, 123, 255, 0.8);
+            box-shadow: 0 0 20px rgba(0, 123, 255, 0.5);
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .mask-area.active {
+            opacity: 1;
+            transform: scale(1);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 15px rgba(0, 123, 255, 0.3);
+            }
+
+            50% {
+                box-shadow: 0 0 25px rgba(0, 123, 255, 0.6);
+            }
+
+            100% {
+                box-shadow: 0 0 15px rgba(0, 123, 255, 0.3);
+            }
+        }
+
+        /* 蒙版控制按钮 - 修改：与缩放控制放在同一区域 */
+        .mask-control {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: flex-end;
+        }
+
+        /* 按钮组样式 */
+        .control-group {
+            display: flex;
+            flex-direction: row;
+            gap: 10px;
+            align-items: center;
+        }
+
+        /* 蒙版按钮 */
+        .mask-btn {
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .mask-btn:hover {
+            background-color: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+        }
+
+        .mask-btn.hide {
+            background-color: #6c757d;
+        }
+
+        .mask-btn.hide:hover {
+            background-color: #545b62;
+        }
+
+        /* 缩放控制按钮组 */
+        .zoom-control-group {
+            display: flex;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 8px 12px;
+            border-radius: 50px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            gap: 5px;
+        }
+
+        .zoom-btn {
+            padding: 8px 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .zoom-btn:hover {
+            background-color: #0056b3;
+            transform: scale(1.1);
+        }
+
+        .zoom-reset {
+            padding: 8px 12px;
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            margin-left: 5px;
+        }
+
+        .zoom-reset:hover {
+            background-color: #545b62;
+        }
+
+        .zoom-level {
+            padding: 8px 12px;
+            background-color: #f8f9fa;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 60px;
+            border: 1px solid #dee2e6;
+        }
+
+        /* 区域编号标记 */
+        .area-label {
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+        }
+
+        /* 提示信息 */
+        .mask-hint {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            z-index: 200;
+            font-size: 14px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .mask-hint.show {
+            opacity: 1;
+        }
+
+        /* 右侧垂直滚动条样式 */
+        .vertical-scrollbar {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 200px;
+            background-color: rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            z-index: 300;
+            cursor: pointer;
+            overflow: hidden;
+            transition: background-color 0.3s ease;
+        }
+
+        .vertical-scrollbar:hover {
+            background-color: rgba(0, 0, 0, 0.15);
+        }
+
+        .scrollbar-thumb {
+            position: absolute;
+            top: 0;
+            /* 新增：初始位置固定为0 */
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background-color: rgba(0, 123, 255, 0.6);
+            border-radius: 8px;
+            cursor: grab;
+            transition: background-color 0.3s ease;
+        }
+
+        .scrollbar-thumb:hover {
+            background-color: rgba(0, 123, 255, 0.8);
+        }
+
+        .scrollbar-thumb:active {
+            cursor: grabbing;
+            background-color: rgba(0, 123, 255, 1);
+        }
+
+        /* 底部水平滚动条样式 */
+        .horizontal-scrollbar {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 200px;
+            height: 16px;
+            background-color: rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            z-index: 300;
+            cursor: pointer;
+            overflow: hidden;
+            transition: background-color 0.3s ease;
+        }
+
+        .horizontal-scrollbar:hover {
+            background-color: rgba(0, 0, 0, 0.15);
+        }
+
+        .horizontal-thumb {
+            position: absolute;
+            top: 0;
+            left: 0;
+            /* 新增：初始位置固定为0 */
+            width: 60px;
+            height: 100%;
+            background-color: rgba(0, 123, 255, 0.6);
+            border-radius: 8px;
+            cursor: grab;
+            transition: background-color 0.3s ease;
+        }
+
+        .horizontal-thumb:hover {
+            background-color: rgba(0, 123, 255, 0.8);
+        }
+
+        .horizontal-thumb:active {
+            cursor: grabbing;
+            background-color: rgba(0, 123, 255, 1);
+        }
+
+        /* 滚动条提示文本 */
+        .scrollbar-hint {
+            position: absolute;
+            right: 35px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .scrollbar-hint.show {
+            opacity: 1;
+        }
+
+        /* 滚动条状态指示器 */
+        .scroll-position {
+            position: absolute;
+            right: 35px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: monospace;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .scroll-position.show {
+            opacity: 1;
+        }
+
+        /* 水平滚动条提示 */
+        .horizontal-scrollbar-hint {
+            position: absolute;
+            bottom: 35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .horizontal-scrollbar-hint.show {
+            opacity: 1;
+        }
+
+        /* 水平滚动条位置指示器 */
+        .horizontal-scroll-position {
+            position: absolute;
+            bottom: 35px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-family: monospace;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .horizontal-scroll-position.show {
+            opacity: 1;
+        }
+
+        /* 操作提示 */
+        .operation-hint {
+            position: fixed;
+            top: 20px;
+            right: 30px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            z-index: 250;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .hint-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 侧边栏容器 -->
+    <div class="sidebar-container" id="sidebarContainer">
+        <div class="toggle-btn" id="toggleBtn"></div>
+        <div class="sidebar">
+            <a href="../../index.html" class="sidebar-item home" data-num="🏠">主页 Home</a>
+            <a href="../1_Bibliometrics/1_Bibliometrics.html" class="sidebar-item item-1" data-num="1">1 期刊论文总体发表情况<span
+                    class="en-text">Bibliometrics</span></a>
+            <a href="../2_Technology/2_Technology.html" class="sidebar-item item-2" data-num="2">2
+                期刊论文技术应用特点<span class="en-text">Technological Applications</span></a>
+            <a href="../3_In_depth/3_In_depth.html" class="sidebar-item item-3" data-num="3">3 研究深度剖析<span
+                    class="en-text">In-depth Systematic Analysis</span></a>
+        </div>
+    </div>
+
+    <!-- 右侧图片内容区 -->
+    <div class="main-content">
+        <div class="image-wrapper" id="imageWrapper">
+            <div class="image-container" id="imageContainer">
+                <img class="my-image" src="./3.png" alt="2 技术应用图片" id="scaleImage" onload="onImageLoaded()">
+                <div class="image-mask" id="imageMask"></div>
+            </div>
+
+            <!-- 垂直滚动条 -->
+            <div class="vertical-scrollbar" id="verticalScrollbar">
+                <div class="scrollbar-thumb" id="scrollbarThumb"></div>
+            </div>
+
+            <!-- 水平滚动条 -->
+            <div class="horizontal-scrollbar" id="horizontalScrollbar">
+                <div class="horizontal-thumb" id="horizontalThumb"></div>
+            </div>
+
+            <div class="scrollbar-hint" id="scrollbarHint">上下拖动</div>
+            <div class="scroll-position" id="scrollPosition">0%</div>
+
+            <!-- 水平滚动条提示 -->
+            <div class="horizontal-scrollbar-hint" id="horizontalScrollbarHint">左右拖动</div>
+            <div class="horizontal-scroll-position" id="horizontalScrollPosition">0%</div>
+        </div>
+    </div>
+
+    <!-- 操作提示 -->
+    <div class="operation-hint" id="operationHint">
+        <div class="hint-item">📌 点击彩色区域跳转</div>
+        <div class="hint-item">Ctrl+滚轮 缩放图片</div>
+        <div class="hint-item">滚轮 上下移动</div>
+        <div class="hint-item">Shift+滚轮 左右移动</div>
+        <div class="hint-item">悬浮±按钮 持续缩放</div> <!-- 新增提示：告知用户悬浮功能 -->
+    </div>
+
+    <!-- 蒙版控制和缩放控制按钮 - 合并到一起：添加onmouseover/onmouseout事件（核心修改） -->
+    <div class="mask-control" id="maskControl">
+        <!-- 缩放控制按钮组：添加悬浮事件 -->
+        <div class="control-group zoom-control-group" id="zoomControls">
+            <button class="zoom-btn" id="zoomOutBtn" onmouseover="startZoomOut()" onmouseout="stopZoomOut()">-</button>
+            <div class="zoom-level" id="zoomLevel">100%</div>
+            <button class="zoom-btn" id="zoomInBtn" onmouseover="startZoomIn()" onmouseout="stopZoomIn()">+</button>
+            <button class="zoom-reset" id="zoomResetBtn" onmouseover="resetView()">重置</button>
+        </div>
+
+        <!-- 蒙版控制按钮组 -->
+        <div class="control-group">
+            <button class="mask-btn" id="toggleMaskBtn">
+                <span>🔍</span>
+                <span>显示交互区域</span>
+            </button>
+            <button class="mask-btn hide" id="hideAllBtn">
+                <span>👁️</span>
+                <span>隐藏所有区域</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 提示信息 -->
+    <div class="mask-hint" id="maskHint"></div>
+
+    <script>
+        const imageContainer = document.getElementById('imageContainer');
+        const image = document.getElementById('scaleImage');
+        const imageWrapper = document.getElementById('imageWrapper');
+        const imageMask = document.getElementById('imageMask');
+        const sidebarContainer = document.getElementById('sidebarContainer');
+
+        let scale = 1;
+        const scaleStep = 0.1;
+        const minScale = 0.5;
+        const maxScale = 5;
+
+        // 新增：悬浮缩放定时器（控制持续缩放，提升体验）
+        let zoomInTimer = null;
+        let zoomOutTimer = null;
+        const zoomInterval = 100; // 悬浮时每100毫秒缩放一次，可调整
+
+        // 新增：平移相关变量
+        let translateX = 0;
+        let translateY = 0;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let dragStartTranslateX = 0;
+        let dragStartTranslateY = 0;
+
+        let imageOriginalWidth = 0;
+        let imageOriginalHeight = 0;
+        let wrapperWidth = 0; // 修改：改为获取可视区域（wrapper）宽度
+        let wrapperHeight = 0; // 修改：改为获取可视区域（wrapper）高度
+
+        // 新增：侧边栏状态切换时的图片适配函数
+        function adaptImageToSidebarState() {
+            const isCollapsed = sidebarContainer.classList.contains('collapsed');
+            const wrapperRect = imageWrapper.getBoundingClientRect();
+            wrapperWidth = wrapperRect.width;
+            wrapperHeight = wrapperRect.height;
+
+            if (isCollapsed) {
+                // 侧边栏收缩：图片自动放大至全屏
+                scale = 1.2; // 全屏缩放比例，可调整（1.2为推荐值，保证铺满无留白）
+                translateX = 0;
+                translateY = 0;
+            } else {
+                // 侧边栏展开：图片平铺右侧，恢复初始缩放
+                scale = 1;
+                translateX = 0;
+                translateY = 0;
+            }
+
+            // 更新图片变换和缩放显示
+            constrainTranslation();
+            updateImageTransform();
+            updateZoomLevel();
+        }
+
+        function onImageLoaded() {
+            imageOriginalWidth = image.naturalWidth;
+            imageOriginalHeight = image.naturalHeight;
+
+            // 修改：获取图片容器（可视区域）的尺寸，而非图片尺寸
+            const wrapperRect = imageWrapper.getBoundingClientRect();
+            wrapperWidth = wrapperRect.width;
+            wrapperHeight = wrapperRect.height;
+
+            setTimeout(() => {
+                createMaskAreas();
+                initScrollbars();
+                adaptImageToSidebarState(); // 初始化时适配侧边栏状态
+            }, 100);
+        }
+
+        // 更新图片变换（缩放 + 平移）
+        function updateImageTransform() {
+            imageContainer.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+            updateScrollbars();
+        }
+
+        // 更新缩放级别显示
+        function updateZoomLevel() {
+            const zoomLevel = document.getElementById('zoomLevel');
+            zoomLevel.textContent = `${Math.round(scale * 100)}%`;
+        }
+
+        // 限制平移范围，防止图片移出可视区域
+        function constrainTranslation() {
+            // 修改：用原始尺寸×缩放比例计算真实缩放尺寸，不受平移影响
+            const scaledWidth = imageOriginalWidth * scale;
+            const scaledHeight = imageOriginalHeight * scale;
+
+            // 计算最大平移范围（图片中心与容器中心对齐时的偏移上限）
+            const maxTranslateX = Math.max(0, (scaledWidth - wrapperWidth) / 2);
+            const maxTranslateY = Math.max(0, (scaledHeight - wrapperHeight) / 2);
+
+            // 限制平移范围
+            translateX = Math.max(-maxTranslateX, Math.min(maxTranslateX, translateX));
+            translateY = Math.max(-maxTranslateY, Math.min(maxTranslateY, translateY));
+
+            // 如果图片比容器小，则居中显示（平移归零）
+            if (scaledWidth <= wrapperWidth) {
+                translateX = 0;
+            }
+            if (scaledHeight <= wrapperHeight) {
+                translateY = 0;
+            }
+        }
+
+        // 重置缩放和平移
+        function resetView() {
+            adaptImageToSidebarState(); // 重置时适配当前侧边栏状态
+            showHint('视图已重置');
+        }
+
+        // 新增：悬浮开始放大（持续执行）
+        function startZoomIn() {
+            // 清除可能存在的缩小定时器，防止冲突
+            if (zoomOutTimer) clearInterval(zoomOutTimer);
+            // 设置放大定时器，持续放大直到达到最大值或鼠标移出
+            zoomInTimer = setInterval(() => {
+                if (scale < maxScale) {
+                    scale += scaleStep;
+                    constrainTranslation();
+                    updateImageTransform();
+                    updateZoomLevel();
+                } else {
+                    clearInterval(zoomInTimer); // 达到最大值停止
+                }
+            }, zoomInterval);
+        }
+
+        // 新增：悬浮停止放大
+        function stopZoomIn() {
+            clearInterval(zoomInTimer);
+        }
+
+        // 新增：悬浮开始缩小（持续执行）
+        function startZoomOut() {
+            // 清除可能存在的放大定时器，防止冲突
+            if (zoomInTimer) clearInterval(zoomInTimer);
+            // 设置缩小定时器，持续缩小直到达到最小值或鼠标移出
+            zoomOutTimer = setInterval(() => {
+                if (scale > minScale) {
+                    scale -= scaleStep;
+                    constrainTranslation();
+                    updateImageTransform();
+                    updateZoomLevel();
+                } else {
+                    clearInterval(zoomOutTimer); // 达到最小值停止
+                }
+            }, zoomInterval);
+        }
+
+        // 新增：悬浮停止缩小
+        function stopZoomOut() {
+            clearInterval(zoomOutTimer);
+        }
+
+        // 滚轮事件处理
+        imageWrapper.addEventListener('wheel', function (e) {
+            e.preventDefault();
+
+            // 按住Ctrl键时进行缩放
+            if (e.ctrlKey || e.metaKey) {
+                if (e.deltaY < 0) {
+                    scale = Math.min(scale + scaleStep, maxScale);
+                } else {
+                    scale = Math.max(scale - scaleStep, minScale);
+                }
+
+                // 缩放后重新计算平移约束
+                constrainTranslation();
+                updateImageTransform();
+                updateZoomLevel();
+            }
+            // 按住Shift键时进行水平滚动（左右移动）
+            else if (e.shiftKey) {
+                let delta = e.deltaY || e.deltaX;
+                translateX += delta * 0.5;
+                constrainTranslation();
+                updateImageTransform();
+            }
+            // 默认进行垂直滚动（上下移动）
+            else {
+                translateY += e.deltaY * 0.5;
+                constrainTranslation();
+                updateImageTransform();
+            }
+        }, {passive: false});
+
+        // 新增：鼠标拖拽功能
+        imageContainer.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', doDrag);
+        document.addEventListener('mouseup', stopDrag);
+
+        function startDrag(e) {
+            if (e.target.closest('.mask-area')) {
+                return; // 如果点击的是蒙版区域，则不触发拖拽
+            }
+
+            isDragging = true;
+            dragStartX = e.clientX;
+            dragStartY = e.clientY;
+            dragStartTranslateX = translateX;
+            dragStartTranslateY = translateY;
+
+            imageContainer.classList.add('grabbing');
+            e.preventDefault();
+        }
+
+        function doDrag(e) {
+            if (!isDragging) return;
+
+            const deltaX = e.clientX - dragStartX;
+            const deltaY = e.clientY - dragStartY;
+
+            translateX = dragStartTranslateX + deltaX;
+            translateY = dragStartTranslateY + deltaY;
+
+            constrainTranslation();
+            updateImageTransform();
+        }
+
+        function stopDrag() {
+            if (!isDragging) return;
+
+            isDragging = false;
+            imageContainer.classList.remove('grabbing');
+        }
+
+        // 蒙版区域定义（31个蒙版，分为4个板块）- 修正蒙版1-2 height前空格
+        const maskAreas = [
+            // 第1个板块（最上方，8个蒙版）- 已统一修改为.html后缀
+            {id: 'area1', label: '技术流向', top: '2%', left: '-1%', width: '50%', height: '32%', link: './3A1/3A1.html', color: 'rgba(239,148,158,0.3)'},
+            {id: 'area2', label: '技术大类', top: '2%', left: '49%', width: '50%', height: '36%', link: './3A2/3A2.html', color: 'rgba(245,180,130,0.3)'}, // 修正：删除height前空格
+            {id: 'area3', label: '具体技术', top: '31%', left: '-1%', width: '50%', height: '28%', link: './3A3/3A3.html', color: 'rgba(254,217,97,0.3)'},
+            {id: 'area4', label: '技术大类组合模式', top: '37%', left: '49%', width: '50%', height: '20%', link: './3A4/3A4.html', color: 'rgba(172,215,142,0.3)'},
+            {id: 'area5', label: '技术大类&年份', top: '60%', left: '-1%', width: '50%', height: '20%', link: './3B1/3B1.html', color: 'rgba(0,176,240,0.3)'},
+            {id: 'area6', label: '七大地理分区', top: '80%', left: '-1%', width: '50%', height: '20%', link: './3B2/3B2.html', color: 'rgba(46,84,161,0.3)'},
+            {id: 'area7', label: '主要期刊', top: '60%', left: '49%', width: '50%', height: '20%', link: './3B3/3B3.html', color: 'rgba(112,48,160,0.3)'},
+            {id: 'area8', label: '主要机构', top: '80%', left: '49%', width: '50%', height: '20%', link: './3B4/3B4.html', color: 'rgba(239,148,158,0.3)'},
+        ];
+
+        const toggleMaskBtn = document.getElementById('toggleMaskBtn');
+        const hideAllBtn = document.getElementById('hideAllBtn');
+        const maskHint = document.getElementById('maskHint');
+
+        function createMaskAreas() {
+            if (!imageOriginalWidth || !imageOriginalHeight) {
+                showHint('图片尚未加载完成，无法创建交互区域');
+                return;
+            }
+
+            imageMask.innerHTML = '';
+
+            maskAreas.forEach(area => {
+                const areaElement = document.createElement('div');
+                areaElement.className = 'mask-area';
+                areaElement.id = area.id;
+
+                areaElement.style.top = area.top;
+                areaElement.style.left = area.left;
+                areaElement.style.width = area.width;
+                areaElement.style.height = area.height;
+                areaElement.style.backgroundColor = area.color;
+
+                const label = document.createElement('div');
+                label.className = 'area-label';
+                label.textContent = area.label;
+                areaElement.appendChild(label);
+
+                areaElement.addEventListener('click', function (e) {
+                    e.stopPropagation();
+
+                    // 现在所有第1板块链接都是html，统一在当前窗口打开（与蒙版1-1行为一致）
+                    if (area.link && area.link !== '#') {
+                        showHint(`正在跳转到: ${area.label}`);
+                        window.location.href = area.link;
+                    }
+                    // 如果没有链接，显示提示
+                    else {
+                        showHint(`抱歉，${area.label}页面尚未创建`);
+                    }
+
+                    this.classList.add('active');
+                    setTimeout(() => {
+                        this.classList.remove('active');
+                    }, 500);
+                });
+
+                areaElement.addEventListener('mouseenter', function () {
+                    this.style.opacity = '1';
+                    this.style.transform = 'scale(1)';
+                });
+
+                areaElement.addEventListener('mouseleave', function () {
+                    if (!this.classList.contains('active')) {
+                        this.style.opacity = '0.7';
+                        this.style.transform = 'scale(0.95)';
+                    }
+                });
+
+                imageMask.appendChild(areaElement);
+            });
+        }
+
+        function toggleMaskAreas() {
+            const areas = document.querySelectorAll('.mask-area');
+            const isVisible = imageMask.style.pointerEvents === 'auto';
+
+            if (isVisible) {
+                imageMask.style.pointerEvents = 'none';
+                areas.forEach(area => {
+                    area.style.opacity = '0';
+                });
+                toggleMaskBtn.innerHTML = '<span>🔍</span><span>显示交互区域</span>';
+                showHint('交互区域已隐藏');
+            } else {
+                imageMask.style.pointerEvents = 'auto';
+                areas.forEach(area => {
+                    area.style.opacity = '0.7';
+                });
+                toggleMaskBtn.innerHTML = '<span>👁️</span><span>隐藏交互区域</span>';
+                showHint('点击图片上的彩色区域可跳转到对应页面');
+            }
+        }
+
+        function hideAllAreas() {
+            const areas = document.querySelectorAll('.mask-area');
+            areas.forEach(area => {
+                area.style.opacity = '0';
+            });
+            imageMask.style.pointerEvents = 'none';
+            toggleMaskBtn.innerHTML = '<span>🔍</span><span>显示交互区域</span>';
+            showHint('所有区域已隐藏');
+        }
+
+        function showHint(message) {
+            maskHint.textContent = message;
+            maskHint.classList.add('show');
+            setTimeout(() => {
+                maskHint.classList.remove('show');
+            }, 3000);
+        }
+
+        window.addEventListener('resize', function () {
+            // 修改：窗口大小变化时，重新获取wrapper尺寸并适配侧边栏状态
+            adaptImageToSidebarState();
+        });
+
+        // 滚动条相关代码
+        const verticalScrollbar = document.getElementById('verticalScrollbar');
+        const scrollbarThumb = document.getElementById('scrollbarThumb');
+        const scrollbarHint = document.getElementById('scrollbarHint');
+        const scrollPosition = document.getElementById('scrollPosition');
+
+        const horizontalScrollbar = document.getElementById('horizontalScrollbar');
+        const horizontalThumb = document.getElementById('horizontalThumb');
+        const horizontalScrollbarHint = document.getElementById('horizontalScrollbarHint');
+        const horizontalScrollPosition = document.getElementById('horizontalScrollPosition');
+
+        let isVerticalDragging = false;
+        let verticalStartY = 0;
+        let verticalStartTop = 0;
+        let verticalScrollbarHeight = 0;
+        let verticalThumbHeight = 0;
+        let verticalMaxThumbTop = 0;
+
+        let isHorizontalDragging = false;
+        let horizontalStartX = 0;
+        let horizontalStartLeft = 0;
+        let horizontalScrollbarWidth = 0;
+        let horizontalThumbWidth = 0;
+        let horizontalMaxThumbLeft = 0;
+
+        function initScrollbars() {
+            // 垂直滚动条初始化
+            verticalScrollbarHeight = verticalScrollbar.offsetHeight;
+            verticalThumbHeight = scrollbarThumb.offsetHeight;
+            verticalMaxThumbTop = verticalScrollbarHeight - verticalThumbHeight;
+
+            // 水平滚动条初始化
+            horizontalScrollbarWidth = horizontalScrollbar.offsetWidth;
+            horizontalThumbWidth = horizontalThumb.offsetWidth;
+            horizontalMaxThumbLeft = horizontalScrollbarWidth - horizontalThumbWidth;
+
+            updateScrollbars();
+
+            // 垂直滚动条事件
+            scrollbarThumb.addEventListener('mousedown', startVerticalDrag);
+            verticalScrollbar.addEventListener('mousedown', verticalScrollbarClick);
+
+            // 水平滚动条事件
+            horizontalThumb.addEventListener('mousedown', startHorizontalDrag);
+            horizontalScrollbar.addEventListener('mousedown', horizontalScrollbarClick);
+
+            document.addEventListener('mousemove', doScrollbarDrag);
+            document.addEventListener('mouseup', stopScrollbarDrag);
+
+            // 垂直滚动条提示
+            verticalScrollbar.addEventListener('mouseenter', function () {
+                scrollbarHint.classList.add('show');
+                scrollPosition.classList.add('show');
+            });
+
+            verticalScrollbar.addEventListener('mouseleave', function () {
+                if (!isVerticalDragging) {
+                    scrollbarHint.classList.remove('show');
+                    scrollPosition.classList.remove('show');
+                }
+            });
+
+            // 水平滚动条提示
+            horizontalScrollbar.addEventListener('mouseenter', function () {
+                horizontalScrollbarHint.classList.add('show');
+                horizontalScrollPosition.classList.add('show');
+            });
+
+            horizontalScrollbar.addEventListener('mouseleave', function () {
+                if (!isHorizontalDragging) {
+                    horizontalScrollbarHint.classList.remove('show');
+                    horizontalScrollPosition.classList.remove('show');
+                }
+            });
+        }
+
+        function updateScrollbars() {
+            // 修改：用原始尺寸×缩放比例计算真实缩放尺寸
+            const scaledWidth = imageOriginalWidth * scale;
+            const scaledHeight = imageOriginalHeight * scale;
+
+            // 更新垂直滚动条
+            if (scaledHeight > wrapperHeight) {
+                verticalScrollbar.style.display = 'block';
+                // 修改：滚动条缩略图高度按比例计算，避免过长/过短
+                verticalThumbHeight = Math.max(20, verticalScrollbarHeight * (wrapperHeight / scaledHeight));
+                scrollbarThumb.style.height = `${verticalThumbHeight}px`;
+
+                verticalMaxThumbTop = verticalScrollbarHeight - verticalThumbHeight;
+
+                // 计算当前垂直位置
+                const maxTranslateY = Math.max(0, (scaledHeight - wrapperHeight) / 2);
+                const verticalPercent = maxTranslateY > 0 ? (translateY + maxTranslateY) / (2 * maxTranslateY) : 0;
+                const currentTop = verticalPercent * verticalMaxThumbTop;
+                scrollbarThumb.style.top = `${Math.max(0, Math.min(currentTop, verticalMaxThumbTop))}px`;
+
+                updateVerticalScrollPosition();
+            } else {
+                verticalScrollbar.style.display = 'none';
+            }
+
+            // 更新水平滚动条
+            if (scaledWidth > wrapperWidth) {
+                horizontalScrollbar.style.display = 'block';
+                // 修改：滚动条缩略图宽度按比例计算，避免过长/过短
+                horizontalThumbWidth = Math.max(20, horizontalScrollbarWidth * (wrapperWidth / scaledWidth));
+                horizontalThumb.style.width = `${horizontalThumbWidth}px`;
+
+                horizontalMaxThumbLeft = horizontalScrollbarWidth - horizontalThumbWidth;
+
+                // 计算当前水平位置
+                const maxTranslateX = Math.max(0, (scaledWidth - wrapperWidth) / 2);
+                const horizontalPercent = maxTranslateX > 0 ? (translateX + maxTranslateX) / (2 * maxTranslateX) : 0;
+                const currentLeft = horizontalPercent * horizontalMaxThumbLeft;
+                horizontalThumb.style.left = `${Math.max(0, Math.min(currentLeft, horizontalMaxThumbLeft))}px`;
+
+                updateHorizontalScrollPosition();
+            } else {
+                horizontalScrollbar.style.display = 'none';
+            }
+        }
+
+        function startVerticalDrag(e) {
+            isVerticalDragging = true;
+            verticalStartY = e.clientY;
+            verticalStartTop = parseFloat(scrollbarThumb.style.top) || 0;
+
+            scrollbarThumb.style.cursor = 'grabbing';
+            scrollbarThumb.style.backgroundColor = 'rgba(0, 123, 255, 1)';
+
+            e.preventDefault();
+        }
+
+        function startHorizontalDrag(e) {
+            isHorizontalDragging = true;
+            horizontalStartX = e.clientX;
+            horizontalStartLeft = parseFloat(horizontalThumb.style.left) || 0;
+
+            horizontalThumb.style.cursor = 'grabbing';
+            horizontalThumb.style.backgroundColor = 'rgba(0, 123, 255, 1)';
+
+            e.preventDefault();
+        }
+
+        function doScrollbarDrag(e) {
+            if (isVerticalDragging) {
+                const deltaY = e.clientY - verticalStartY;
+                let newTop = verticalStartTop + deltaY;
+
+                newTop = Math.max(0, Math.min(newTop, verticalMaxThumbTop));
+
+                scrollbarThumb.style.top = `${newTop}px`;
+
+                const scrollPercent = newTop / verticalMaxThumbTop;
+                scrollImageVertical(scrollPercent);
+
+                updateVerticalScrollPosition();
+            }
+
+            if (isHorizontalDragging) {
+                const deltaX = e.clientX - horizontalStartX;
+                let newLeft = horizontalStartLeft + deltaX;
+
+                newLeft = Math.max(0, Math.min(newLeft, horizontalMaxThumbLeft));
+
+                horizontalThumb.style.left = `${newLeft}px`;
+
+                const scrollPercent = newLeft / horizontalMaxThumbLeft;
+                scrollImageHorizontal(scrollPercent);
+
+                updateHorizontalScrollPosition();
+            }
+        }
+
+        function stopScrollbarDrag() {
+            if (isVerticalDragging) {
+                isVerticalDragging = false;
+                scrollbarThumb.style.cursor = 'grab';
+                scrollbarThumb.style.backgroundColor = 'rgba(0, 123, 255, 0.6)';
+            }
+
+            if (isHorizontalDragging) {
+                isHorizontalDragging = false;
+                horizontalThumb.style.cursor = 'grab';
+                horizontalThumb.style.backgroundColor = 'rgba(0, 123, 255, 0.6)';
+            }
+        }
+
+        function verticalScrollbarClick(e) {
+            if (e.target === scrollbarThumb) return;
+
+            const rect = verticalScrollbar.getBoundingClientRect();
+            const clickY = e.clientY - rect.top;
+
+            let newTop = clickY - verticalThumbHeight / 2;
+            newTop = Math.max(0, Math.min(newTop, verticalMaxThumbTop));
+
+            scrollbarThumb.style.top = `${newTop}px`;
+
+            const scrollPercent = newTop / verticalMaxThumbTop;
+            scrollImageVertical(scrollPercent);
+
+            updateVerticalScrollPosition();
+        }
+
+        function horizontalScrollbarClick(e) {
+            if (e.target === horizontalThumb) return;
+
+            // 修改：修正horizontalScrollbar的translateX(-50%)偏移，获取准确点击位置
+            const rect = horizontalScrollbar.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+
+            let newLeft = clickX - horizontalThumbWidth / 2;
+            newLeft = Math.max(0, Math.min(newLeft, horizontalMaxThumbLeft));
+
+            horizontalThumb.style.left = `${newLeft}px`;
+
+            const scrollPercent = newLeft / horizontalMaxThumbLeft;
+            scrollImageHorizontal(scrollPercent);
+
+            updateHorizontalScrollPosition();
+        }
+
+        function scrollImageVertical(percent) {
+            // 修改：用原始尺寸×缩放比例计算真实缩放尺寸
+            const scaledHeight = imageOriginalHeight * scale;
+
+            const maxTranslateY = Math.max(0, (scaledHeight - wrapperHeight) / 2);
+            if (maxTranslateY > 0) {
+                translateY = percent * (2 * maxTranslateY) - maxTranslateY;
+                constrainTranslation();
+                updateImageTransform();
+            }
+        }
+
+        function scrollImageHorizontal(percent) {
+            // 修改：用原始尺寸×缩放比例计算真实缩放尺寸
+            const scaledWidth = imageOriginalWidth * scale;
+
+            const maxTranslateX = Math.max(0, (scaledWidth - wrapperWidth) / 2);
+            if (maxTranslateX > 0) {
+                translateX = percent * (2 * maxTranslateX) - maxTranslateX;
+                constrainTranslation();
+                updateImageTransform();
+            }
+        }
+
+        function updateVerticalScrollPosition() {
+            const currentTop = parseFloat(scrollbarThumb.style.top) || 0;
+            const percent = verticalMaxThumbTop > 0 ? Math.round((currentTop / verticalMaxThumbTop) * 100) : 0;
+            scrollPosition.textContent = `${percent}%`;
+
+            scrollPosition.classList.add('show');
+        }
+
+        function updateHorizontalScrollPosition() {
+            const currentLeft = parseFloat(horizontalThumb.style.left) || 0;
+            const percent = horizontalMaxThumbLeft > 0 ? Math.round((currentLeft / horizontalMaxThumbLeft) * 100) : 0;
+            horizontalScrollPosition.textContent = `${percent}%`;
+
+            horizontalScrollPosition.classList.add('show');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // 侧边栏收缩/展开逻辑 - 新增：切换时触发图片适配
+            const toggleBtn = document.getElementById('toggleBtn');
+            toggleBtn.addEventListener('click', function () {
+                sidebarContainer.classList.toggle('collapsed');
+                adaptImageToSidebarState(); // 切换状态后适配图片
+            });
+
+            // 蒙版控制按钮事件
+            toggleMaskBtn.addEventListener('click', toggleMaskAreas);
+            hideAllBtn.addEventListener('click', hideAllAreas);
+
+            // 缩放控制按钮事件（保留原有点击功能，与悬浮功能不冲突）
+            const zoomInBtn = document.getElementById('zoomInBtn');
+            const zoomOutBtn = document.getElementById('zoomOutBtn');
+            const zoomResetBtn = document.getElementById('zoomResetBtn');
+
+            zoomInBtn.addEventListener('click', function () {
+                scale = Math.min(scale + scaleStep, maxScale);
+                constrainTranslation();
+                updateImageTransform();
+                updateZoomLevel();
+            });
+
+            zoomOutBtn.addEventListener('click', function () {
+                scale = Math.max(scale - scaleStep, minScale);
+                constrainTranslation();
+                updateImageTransform();
+                updateZoomLevel();
+            });
+
+            zoomResetBtn.addEventListener('click', resetView);
+
+            imageWrapper.addEventListener('click', function (e) {
+                if (e.target === imageWrapper || e.target === image) {
+                    hideAllAreas();
+                }
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'm' || e.key === 'M') {
+                    toggleMaskAreas();
+                }
+                if (e.key === 'Escape') {
+                    hideAllAreas();
+                }
+                if (e.key === '0' && e.ctrlKey) {
+                    resetView();
+                    e.preventDefault();
+                }
+                if (e.key === '+' && e.ctrlKey) {
+                    scale = Math.min(scale + scaleStep, maxScale);
+                    constrainTranslation();
+                    updateImageTransform();
+                    updateZoomLevel();
+                    e.preventDefault();
+                }
+                if (e.key === '-' && e.ctrlKey) {
+                    scale = Math.max(scale - scaleStep, minScale);
+                    constrainTranslation();
+                    updateImageTransform();
+                    updateZoomLevel();
+                    e.preventDefault();
+                }
+            });
+
+            if (image.complete) {
+                onImageLoaded();
+            }
+        });
+
+        // 初始化提示信息隐藏
+        scrollbarHint.classList.remove('show');
+        scrollPosition.classList.remove('show');
+        horizontalScrollbarHint.classList.remove('show');
+        horizontalScrollPosition.classList.remove('show');
+    </script>
+</body>
+
+</html>
